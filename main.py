@@ -135,3 +135,46 @@ async def process_purchase(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/send-email")
+async def send_email(
+    email_request: EmailRequest,
+    client: str = Depends(get_api_key)
+):
+    """
+    Endpoint called after the frontend creates the card.
+    Sends an email to the user with the card link.
+    """
+    try:
+        message = EmailMessage()
+        message["From"] = os.getenv("EMAIL_FROM", "your-email@domain.com")
+        message["To"] = email_request.email
+        message["Subject"] = f"Your Course Completion Card for {email_request.course_name}"
+        
+        content = f"""
+        Dear {email_request.user_name},
+        
+        Congratulations on purchasing {email_request.course_name}! 
+        We've created a special celebration card just for you.
+        
+        View and share your card here: {email_request.card_url}
+        
+        Happy learning!
+        """
+        
+        message.set_content(content)
+        
+        # Send email using configured SMTP settings
+        await send(
+            message,
+            hostname=os.getenv("SMTP_HOST", "smtp.your-email-provider.com"),
+            port=int(os.getenv("SMTP_PORT", "587")),
+            username=os.getenv("SMTP_USER", "your-username"),
+            password=os.getenv("SMTP_PASS", "your-password"),
+            use_tls=True
+        )
+        
+        return {"status": "success", "message": "Email sent successfully"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
